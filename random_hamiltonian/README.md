@@ -4,4 +4,4 @@ This directory contains source code for generating data for Figure 2 of the pape
 
 Compilers with proper C++20 support, OpenMP, Eigen3, MPI, and ARPACK-NG are required to install this package.
 
-Feel free to open an issue when having trouble in installing the package.
+Feel free to open an issue when having trouble in compiling the package.
