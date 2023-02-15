@@ -18,6 +18,6 @@ $ cmake . -Bbuild
 $ cmake --build ./build
 ```
 
-Then the resulting executable files `random_ham_grad` and `random_ham_grad_real` are generated within `build` directory.
+After that the resulting executable files `random_ham_grad` and `random_ham_grad_real` will be available within `build` directory.
 
 Feel free to open an issue when having trouble in compiling the package.
