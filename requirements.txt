@@ -1,0 +1,2 @@
+PennyLane~=0.28.0
+PennyLane-Lightning~=0.28.0
