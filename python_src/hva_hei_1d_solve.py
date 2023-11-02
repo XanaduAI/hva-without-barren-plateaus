@@ -65,7 +65,7 @@ if __name__ == '__main__':
     opt = qml.AdamOptimizer(eta, beta1=0.9, beta2=0.999, eps=1e-7)
     rng = Generator(PCG64())
     if param_init == 'pi':
-        init_params = math.pi*np.ones((NUM_PARAMS, 1))
+        init_params = math.pi*np.ones((NUM_PARAMS, ))
     elif param_init == 'random':
         low = 0.0
         high = 2*math.pi
