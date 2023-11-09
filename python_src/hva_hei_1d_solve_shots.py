@@ -7,7 +7,7 @@ from numpy.random import Generator, PCG64
 import argparse
 from utils import create_neel_st
 
-NUM_WIRES = 14
+NUM_WIRES = 16
 TOTAL_BLOCKS = NUM_WIRES
 LAYERS_PER_BLOCK = 3
 NUM_PARAMS = TOTAL_BLOCKS * LAYERS_PER_BLOCK
@@ -47,7 +47,7 @@ def calc_grad(x):
     
 if __name__ == '__main__':
     #total_steps = 10
-    total_steps = 200
+    total_steps = 500
 
     parser = argparse.ArgumentParser(description='Run VQE for solving the 1D Heisenberg model')
     parser.add_argument('--learning_rate', required=True, help='Learning rate. Values bettwen [0.005, 0.5] works well', type=float)
@@ -85,9 +85,12 @@ if __name__ == '__main__':
     qnode = qml.QNode(circuit, dev, diff_method="parameter-shift", interface="autograd")
     params = pnp.array(init_params, requires_grad = True)
 
+    eval_dev = qml.device('lightning.qubit', wires=NUM_WIRES)
+    eval_qnode = qml.QNode(circuit, dev, diff_method=None, interface="autograd")
+
     opt = qml.AdamOptimizer(eta, beta1=0.9, beta2=0.999, eps=1e-7)
 
     for step in range(total_steps):
-        cost = qnode(params)
+        cost = eval_qnode(params)
         params = opt.step(qnode, params)
         print(f"step: {step}, cost: {cost}", flush=True)
