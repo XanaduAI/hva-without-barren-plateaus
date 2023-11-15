@@ -9,7 +9,7 @@ int main() {
 	}
 	edges.emplace_back(1, 3);
 
-	HVA hva(16, 3, std::span{edges});
+	HVA hva(16, 3, edges);
 
 	std::vector<double> params(9, 0.2);
 

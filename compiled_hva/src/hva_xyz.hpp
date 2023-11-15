@@ -154,7 +154,7 @@ private:
 		return xx + yy + zz;
 	}
 public:
-	HVA(size_t num_qubits, size_t num_blocks, const std::span<const std::pair<size_t, size_t>> edges)
+	HVA(size_t num_qubits, size_t num_blocks, const std::vector<std::pair<size_t, size_t>>& edges)
 		: num_qubits_{num_qubits}, num_blocks_{num_blocks}, edges_(edges.begin(), edges.end()){
 	}
 

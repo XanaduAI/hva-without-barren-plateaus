@@ -1,53 +1,21 @@
 import pennylane as qml
-import pennylane.numpy as pnp
 import numpy as np
 import math
 import sys
 from numpy.random import Generator, PCG64
 import argparse
 from utils import create_neel_st
+from hva_xyz import HVA
+import jax.numpy as jnp
+import optax
 
 NUM_WIRES = 16
 TOTAL_BLOCKS = NUM_WIRES
 LAYERS_PER_BLOCK = 3
 NUM_PARAMS = TOTAL_BLOCKS * LAYERS_PER_BLOCK
 
-def make_xxz_ham(delta):
-    obs = []
-    coeffs = []
-    for w in range(NUM_WIRES):
-        obs.append(qml.PauliX(w) @ qml.PauliX((w+1) % NUM_WIRES))
-        coeffs.append(1.0)
-    for w in range(NUM_WIRES):
-        obs.append(qml.PauliY(w) @ qml.PauliY((w+1) % NUM_WIRES))
-        coeffs.append(1.0)
-    for w in range(NUM_WIRES):
-        obs.append(qml.PauliZ(w) @ qml.PauliZ((w+1) % NUM_WIRES))
-        coeffs.append(delta)
-
-    return qml.Hamiltonian(coeffs, obs, grouping_type='qwc')
-
-ini_st = create_neel_st(NUM_WIRES)
-ham = make_xxz_ham(1.0)
-
-def circuit(x):
-    qml.QubitStateVector(ini_st, wires = range(NUM_WIRES))
-    for k in range(TOTAL_BLOCKS):
-        for w in range(NUM_WIRES):
-            qml.IsingXX(2*x[LAYERS_PER_BLOCK*k+0], wires=[w, (w+1) % NUM_WIRES])
-        for w in range(NUM_WIRES):
-            qml.IsingYY(2*x[LAYERS_PER_BLOCK*k+1], wires=[w, (w+1) % NUM_WIRES])
-        for w in range(NUM_WIRES):
-            qml.IsingZZ(2*x[LAYERS_PER_BLOCK*k+2], wires=[w, (w+1) % NUM_WIRES])
-
-    return qml.expval(ham)
-
-def calc_grad(x):
-    return qml.grad(circuit)(x)
-    
 if __name__ == '__main__':
-    #total_steps = 10
-    total_steps = 500
+    total_steps = 1000
 
     parser = argparse.ArgumentParser(description='Run VQE for solving the 1D Heisenberg model')
     parser.add_argument('--learning_rate', required=True, help='Learning rate. Values bettwen [0.005, 0.5] works well', type=float)
@@ -79,18 +47,26 @@ if __name__ == '__main__':
     else:
         raise ValueError('Unkown command line option value for --param_init')
 
-    print(init_params, file=sys.stderr)
+    params = jnp.array(init_params)
 
-    dev = qml.device('lightning.qubit', wires=NUM_WIRES, shots=num_shots)
-    qnode = qml.QNode(circuit, dev, diff_method="parameter-shift", interface="autograd")
-    params = pnp.array(init_params, requires_grad = True)
+    optimizer = optax.adam(eta, b2=0.999, eps=1e-7)
+    opt_state = optimizer.init(params)
 
-    eval_dev = qml.device('lightning.qubit', wires=NUM_WIRES)
-    eval_qnode = qml.QNode(circuit, dev, diff_method=None, interface="autograd")
+    edges = []
+    for i in range(NUM_WIRES):
+        edges.append([i, (i+1)%NUM_WIRES])
 
-    opt = qml.AdamOptimizer(eta, beta1=0.9, beta2=0.999, eps=1e-7)
+    hva_xyz = HVA(NUM_WIRES, TOTAL_BLOCKS, edges)
+
+    ini_st = create_neel_st(NUM_WIRES)
 
     for step in range(total_steps):
-        cost = eval_qnode(params)
-        params = opt.step(qnode, params)
-        print(f"step: {step}, cost: {cost}", flush=True)
+        grads = hva_xyz.grad_shots(ini_st, params, num_shots)
+        grads = jnp.array(grads)
+
+        updates, opt_state = optimizer.update(grads, opt_state)
+        params = optax.apply_updates(params, updates)
+
+        if step % 20 == 0:
+            cost = hva_xyz.expval(ini_st, params)
+            print(f"step: {step}, cost: {cost}", flush=True)
