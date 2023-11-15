@@ -36,9 +36,11 @@ def create_circuit(num_blocks, edges):
 edges = []
 for i in range(16):
     edges.append([i, (i+1)%16])
+edges.append([1, 3])
 
 my_circuit = create_circuit(3, edges)
 params = pnp.array(0.2*np.ones(9), requires_grad=True)
+params[3] = 0.8
 
 print(my_circuit(params))
 print(qml.grad(my_circuit)(params))

@@ -37,6 +37,13 @@ if(ENABLE_PYTHON)
     FetchContent_MakeAvailable(pybind11)
 endif()
 
+
+if(ENABLE_PYTHON)
+    pybind11_add_module(_hva_xyz src/binding.cpp)
+    target_link_libraries(_hva_xyz PUBLIC lightning_qubit hva_xyz_compile_options)
+    set_target_properties(_hva_xyz PROPERTIES CXX_VISIBILITY_PRESET hidden)
+endif()
+
 add_executable(test "test/test.cpp")
 target_include_directories(test  PUBLIC "src")
 target_link_libraries(test PUBLIC lightning_qubit hva_xyz_compile_options)

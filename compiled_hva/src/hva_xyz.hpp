@@ -2,6 +2,7 @@
 #include "sample.hpp"
 
 #include "StateVectorLQubitManaged.hpp"
+#include "LinearAlgebra.hpp"
 
 #include <algorithm>
 #include <complex>
@@ -157,6 +158,57 @@ public:
 		: num_qubits_{num_qubits}, num_blocks_{num_blocks}, edges_(edges.begin(), edges.end()){
 	}
 
+	double expval(std::span<const std::complex<double>> ini_st, const std::span<const double> params) const {
+		if(params.size() != 3 * num_blocks_) {
+			throw std::invalid_argument("Size of the parameters mismatch.");
+		}
+
+		Pennylane::LightningQubit::StateVectorLQubitManaged<double> sv{num_qubits_};
+		sv.updateData(ini_st.data(), ini_st.size());
+
+		for(size_t k = 0; k < num_blocks_; k++) {
+			for(const auto& edge: edges_) {
+				sv.applyOperation("IsingXX", {edge.first, edge.second}, false, {params[3*k+0]});
+			}
+			for(const auto& edge: edges_) {
+				sv.applyOperation("IsingYY", {edge.first, edge.second}, false, {params[3*k+1]});
+			}
+			for(const auto& edge: edges_) {
+				sv.applyOperation("IsingZZ", {edge.first, edge.second}, false, {params[3*k+2]});
+			}
+		}
+
+		const auto& st = sv.getDataVector();
+
+		std::vector<std::complex<double>> h_st(st.size(), 0.0);
+
+		// XX + YY
+#pragma omp parallel for
+		for(size_t s = 0; s < st.size(); s++) {
+			for(auto&& [i, j]: edges_) {
+				const size_t rev_i = num_qubits_ - i - 1;
+				const size_t rev_j = num_qubits_ - j - 1;
+				
+				size_t u = (1UL << rev_i) | (1UL << rev_j);
+				int sgn = (1-2*int((s >> rev_i) & 1))*(1-2*int((s >> rev_j) & 1));
+				h_st[s] += static_cast<double>(1 - sgn)*st[s ^ u];
+			}
+		}
+
+		// ZZ
+#pragma omp parallel for
+		for(size_t s = 0; s < st.size(); s++) {
+			for(auto&& [i, j]: edges_) {
+				const size_t rev_i = num_qubits_ - i - 1;
+				const size_t rev_j = num_qubits_ - j - 1;
+				
+				int sgn = (1-2*int((s >> rev_i) & 1))*(1-2*int((s >> rev_j) & 1));
+				h_st[s] += static_cast<double>(sgn)*st[s];
+			}
+		}
+
+		return std::real(Pennylane::LightningQubit::Util::innerProdC(h_st.data(), st.data(), st.size()));
+	}
 
 	double expval_shots(std::span<const std::complex<double>> ini_st, const std::span<const double> params, size_t shots) const {
 		if(params.size() != 3 * num_blocks_) {
