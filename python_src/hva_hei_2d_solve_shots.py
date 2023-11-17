@@ -9,6 +9,7 @@ from hva_xyz import HVA
 import jax.numpy as jnp
 import optax
 from tqdm import tqdm
+import os
 
 Lx = 4
 Ly = 4
@@ -16,6 +17,11 @@ NUM_WIRES = Lx*Ly
 TOTAL_BLOCKS = NUM_WIRES
 LAYERS_PER_BLOCK = 3
 NUM_PARAMS = TOTAL_BLOCKS * LAYERS_PER_BLOCK
+
+os.environ["XLA_FLAGS"] = ("--xla_cpu_multi_thread_eigen=false "
+                           "intra_op_parallelism_threads=1")
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+
 
 def wire_idx(i, j):
     return j*Lx + i
