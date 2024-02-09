@@ -1,0 +1,4 @@
+build*/
+.cache/
+CompiledHVA.egg-info
+hva_xyz/_hva_xyz.cpython-*-linux-gnu.so
