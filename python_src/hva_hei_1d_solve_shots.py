@@ -46,8 +46,8 @@ def calc_grad(x):
     return qml.grad(circuit)(x)
     
 if __name__ == '__main__':
-    #total_steps = 10
-    total_steps = 200
+    total_steps = 10
+    #total_steps = 200
 
     parser = argparse.ArgumentParser(description='Run VQE for solving the 1D Heisenberg model')
     parser.add_argument('--learning_rate', required=True, help='Learning rate. Values bettwen [0.005, 0.5] works well', type=float)
